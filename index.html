@@ -164,11 +164,16 @@
   <script>
     // ★★★ ここにGASのウェブアプリURLを貼り付けてください ★★★
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzXoOzoSMiED11ttrOVKVwilBT142M9ITd-HI3_XI7eolMQ6HqwUURcagAgp34Nx57fAA/exec'; 
-
     let appData = null;
-    let currentSlots = {}; // スロット用データ
-    let currentQuestion = ""; // 会話用データ
+    let currentSlots = {}; 
+    let currentQuestion = ""; 
     const { pinyin } = pinyinPro;
+
+    // --- 音声認識の制御用変数 ---
+    let slotRecognition = null;
+    let isSlotRecording = false;
+    let chatRecognition = null;
+    let isChatRecording = false;
 
     // --- 初期化 ---
     window.onload = async () => {
@@ -178,7 +183,7 @@
         setupControls();
         document.getElementById('loadingMsg').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
-        generateSlotSentence(); // 初期表示
+        generateSlotSentence(); 
       } catch (e) {
         document.getElementById('loadingMsg').innerText = 'データ読み込みエラー。URLを確認してください。';
       }
@@ -197,7 +202,6 @@
       document.getElementById('tab-' + tabName).classList.add('active');
       document.getElementById('content-' + tabName).classList.add('active');
       
-      // タブ切り替え時に現在の設定で生成し直す
       if(tabName === 'slot') generateSlotSentence();
       if(tabName === 'chat') generateChatQuestion();
     }
@@ -211,10 +215,8 @@
       const cat = document.getElementById('catSelect').value;
       const freq = document.getElementById('freqSelect').value;
       
-      // 主語は質問用主語(qSubject)をデフォルトとして使用
       const subjPair = getRandom(appData.subjects) || {qSubject: '你', qPinyin: 'nǐ'};
       currentSlots.subject = { chinese: subjPair.qSubject, pinyin: subjPair.qPinyin };
-      
       currentSlots.frequency = appData.frequencies.find(f => f.text === freq) || {text: freq};
       currentSlots.verb = getRandom(appData.verbs.filter(v => v.targetCategory === cat)) || {chinese: '做'};
       currentSlots.object = getRandom(appData.categories[cat]) || {chinese: '什么'};
@@ -250,7 +252,6 @@
 
       if (slotType === 'subject') { 
         header.innerText = '主語を変更'; 
-        // 主語ペアから選択肢を生成
         options = appData.subjects.map(s => ({chinese: s.qSubject, pinyin: s.qPinyin, japanese: ''})); 
       } 
       else if (slotType === 'frequency') { header.innerText = '頻度を変更'; options = appData.frequencies; } 
@@ -279,24 +280,53 @@
       window.speechSynthesis.speak(utterance);
     }
 
+    // --- スロット用 音声認識（手動停止対応） ---
     function startSlotRecognition() {
       if (!('webkitSpeechRecognition' in window)) { alert('Chromeブラウザをご利用ください。'); return; }
-      const recognition = new webkitSpeechRecognition();
-      recognition.lang = 'zh-CN';
-      recognition.interimResults = false;
+      
+      const btn = document.querySelector('#slotActions button:nth-child(2)');
+      const scoreEl = document.getElementById('slotScoreDisplay');
+
+      // 録音中なら停止する
+      if (isSlotRecording) {
+        if (slotRecognition) slotRecognition.stop();
+        return;
+      }
+
+      slotRecognition = new webkitSpeechRecognition();
+      slotRecognition.lang = 'zh-CN';
+      slotRecognition.interimResults = false;
       
       document.getElementById('slotResultBox').style.display = 'block';
-      document.getElementById('slotScoreDisplay').innerText = '🎤 音声を聞き取っています...';
-      document.getElementById('slotScoreDisplay').className = 'score-text';
+      scoreEl.innerText = '🎤 聞き取っています... (もう一度押すと終了)';
+      scoreEl.className = 'score-text';
       document.getElementById('slotFeedbackMsg').innerText = '';
+      
+      // ボタンの見た目を変更
+      btn.innerText = '⏹ 録音を停止';
+      btn.style.backgroundColor = '#7f8c8d';
+      isSlotRecording = true;
 
-      recognition.onresult = (e) => {
+      slotRecognition.onresult = (e) => {
         const userText = e.results[0][0].transcript.replace(/[。，？！]/g, '');
         const targetText = getFullSlotText();
         evaluatePronunciation(targetText, userText);
       };
-      recognition.onerror = (e) => { document.getElementById('slotScoreDisplay').innerText = 'エラー: ' + e.error; };
-      recognition.start();
+
+      slotRecognition.onerror = (e) => { 
+        if(e.error === 'no-speech') scoreEl.innerText = '音声が検出されませんでした。';
+        else scoreEl.innerText = 'エラー: ' + e.error; 
+      };
+
+      slotRecognition.onend = () => {
+        // 録音が終わったらボタンを元に戻す
+        isSlotRecording = false;
+        btn.innerText = '🎤 発音チェック';
+        btn.style.backgroundColor = '#e74c3c';
+        if(scoreEl.innerText.includes('聞き取っています')) scoreEl.innerText = '録音終了';
+      };
+
+      slotRecognition.start();
     }
 
     function levenshteinDistance(arr1, arr2) {
@@ -372,20 +402,30 @@
       window.speechSynthesis.speak(utterance);
     }
 
+    // --- 会話用 音声認識（手動停止対応） ---
     function startChatRecognition() {
       if (!('webkitSpeechRecognition' in window)) { alert('Chromeをご利用ください。'); return; }
-      const recognition = new webkitSpeechRecognition();
-      recognition.lang = 'zh-CN';
-      recognition.interimResults = false;
       
+      const btn = document.getElementById('btnRecord');
       const statusEl = document.getElementById('recStatus');
-      statusEl.innerText = '聞き取っています...';
-      document.getElementById('btnRecord').disabled = true;
 
-      recognition.onresult = (e) => {
+      // 録音中なら停止する
+      if (isChatRecording) {
+        if (chatRecognition) chatRecognition.stop();
+        return;
+      }
+
+      chatRecognition = new webkitSpeechRecognition();
+      chatRecognition.lang = 'zh-CN';
+      chatRecognition.interimResults = false;
+      
+      statusEl.innerText = '聞き取っています... (もう一度押すと終了)';
+      btn.innerText = '⏹ 録音を停止';
+      btn.style.backgroundColor = '#7f8c8d';
+      isChatRecording = true;
+
+      chatRecognition.onresult = (e) => {
         const userText = e.results[0][0].transcript;
-        statusEl.innerText = '';
-        document.getElementById('btnRecord').disabled = false;
         
         document.getElementById('aZh').innerText = userText;
         document.getElementById('aPy').innerText = pinyin(userText);
@@ -394,16 +434,25 @@
         evaluateWithAI(currentQuestion, userText);
       };
       
-      recognition.onerror = (e) => {
-        statusEl.innerText = 'エラー: ' + e.error;
-        document.getElementById('btnRecord').disabled = false;
+      chatRecognition.onerror = (e) => {
+        if(e.error === 'no-speech') statusEl.innerText = '音声が検出されませんでした。';
+        else statusEl.innerText = 'エラー: ' + e.error;
       };
-      recognition.start();
+
+      chatRecognition.onend = () => {
+        // 録音が終わったらボタンを元に戻す
+        isChatRecording = false;
+        btn.innerText = '🎤 回答を音声入力';
+        btn.style.backgroundColor = '#e74c3c';
+        if(statusEl.innerText.includes('聞き取っています')) statusEl.innerText = '';
+      };
+
+      chatRecognition.start();
     }
 
     async function evaluateWithAI(question, answer) {
       const resultBox = document.getElementById('aiResultBox');
-      document.getElementById('aiScore').innerText = '🤖 AIが評価中...';
+      document.getElementById('aiScore').innerText = '🤖 AIが評価中... (最大1分ほどかかります)';
       document.getElementById('aiFeedback').innerText = '';
       document.getElementById('aiCorrection').innerText = '';
       resultBox.style.display = 'block';
@@ -421,7 +470,7 @@
         document.getElementById('aiCorrection').innerText = result.correction;
       } catch (error) {
         document.getElementById('aiScore').innerText = '評価エラー';
-        document.getElementById('aiFeedback').innerText = '通信に失敗しました。';
+        document.getElementById('aiFeedback').innerText = '通信に失敗しました。AIサーバーが混雑している可能性があります。';
       }
     }
   </script>
