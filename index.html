@@ -3,26 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>中国語学習アプリ (統合版)</title>
+  <title>中国語学習アプリ (AI評価ボタン＆記録版)</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/pinyin-pro"></script>
   <style>
-    /* --- 基本スタイル --- */
     body { font-family: 'Noto Sans JP', sans-serif; background-color: #f0f8ff; color: #333; text-align: center; margin: 0; padding: 20px; }
     .container { max-width: 800px; margin: 0 auto; background-color: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
     .button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; background-color: #3498db; color: white; font-size: 16px; cursor: pointer; transition: 0.2s; }
     .button:hover { background-color: #2980b9; }
     .button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
     select { padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; margin: 0 10px 20px; }
+    textarea { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-family: inherit; font-size: 14px; box-sizing: border-box; resize: vertical; }
     
-    /* --- タブUI --- */
-    .tabs { display: flex; justify-content: center; margin-bottom: 20px; border-bottom: 2px solid #eee; }
-    .tab { padding: 10px 30px; cursor: pointer; font-size: 18px; font-weight: bold; color: #888; border-bottom: 3px solid transparent; }
+    .tabs { display: flex; justify-content: center; margin-bottom: 20px; border-bottom: 2px solid #eee; flex-wrap: wrap; }
+    .tab { padding: 10px 20px; cursor: pointer; font-size: 16px; font-weight: bold; color: #888; border-bottom: 3px solid transparent; }
     .tab.active { color: #3498db; border-bottom: 3px solid #3498db; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* --- スロットスタイル --- */
     .slot-sentence { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; background-color: #e8f5e9; padding: 20px; border-radius: 8px; min-height: 100px; margin-bottom: 20px; }
     .slot-item { display: flex; flex-direction: column; align-items: center; margin: 5px; padding: 10px 15px; border: 2px dashed #4caf50; border-radius: 8px; background-color: white; cursor: pointer; min-width: 60px; transition: 0.2s; }
     .slot-item:hover { background-color: #c8e6c9; transform: translateY(-2px); }
@@ -31,7 +29,6 @@
     .slot-label { font-size: 10px; color: #fff; background-color: #4caf50; padding: 2px 6px; border-radius: 10px; margin-bottom: 5px; }
     .punctuation { font-size: 28px; color: #2c3e50; align-self: center; margin-top: 15px; }
 
-    /* --- モーダル（選択肢） --- */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
     .modal-content { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto; text-align: left; }
     .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
@@ -39,10 +36,8 @@
     .option-item:hover { background-color: #f9f9f9; }
     .opt-zh { font-size: 18px; font-weight: bold; }
     .opt-py { font-size: 14px; color: #888; margin-left: 10px; }
-    .opt-ja { font-size: 12px; color: #aaa; }
     .close-btn { width: 100%; margin-top: 15px; background-color: #e74c3c; }
 
-    /* --- 評価結果スタイル (スロット用) --- */
     .result-box { margin-top: 20px; padding: 20px; border-radius: 8px; background-color: #f8f9fa; border: 1px solid #ddd; text-align: left; display: none; }
     .score-text { font-size: 24px; font-weight: bold; text-align: center; margin-bottom: 10px; }
     .score-100 { color: #27ae60; }
@@ -53,7 +48,6 @@
     .compare-content { flex-grow: 1; font-family: 'Noto Sans SC', sans-serif; font-size: 18px; }
     .compare-py { font-size: 14px; color: #888; }
 
-    /* --- 会話機能UI --- */
     .chat-box { background-color: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px; text-align: left; }
     .chat-bubble { padding: 15px; border-radius: 15px; margin-bottom: 15px; max-width: 80%; }
     .chat-q { background-color: #e8f5e9; border-bottom-left-radius: 0; margin-right: auto; }
@@ -61,10 +55,9 @@
     .zh-text { font-family: 'Noto Sans SC', sans-serif; font-size: 24px; font-weight: bold; }
     .py-text { font-size: 14px; color: #666; }
     
-    /* --- AI評価結果 (会話用) --- */
     .ai-result { background-color: #fff3e0; border: 1px solid #ffe0b2; padding: 15px; border-radius: 8px; margin-top: 20px; text-align: left; display: none; }
     .ai-score { font-size: 24px; font-weight: bold; color: #e67e22; text-align: center; margin-bottom: 10px; }
-    .ai-feedback { font-size: 16px; margin-bottom: 10px; }
+    .ai-feedback { font-size: 16px; margin-bottom: 10px; white-space: pre-wrap; }
     .ai-correction { font-family: 'Noto Sans SC', sans-serif; font-size: 18px; color: #27ae60; font-weight: bold; }
   </style>
 </head>
@@ -74,32 +67,25 @@
     <div id="loadingMsg">データを読み込み中...</div>
 
     <div id="mainApp" style="display:none;">
-      <!-- タブメニュー -->
       <div class="tabs">
         <div class="tab active" id="tab-slot" onclick="switchTab('slot')">スロット練習</div>
         <div class="tab" id="tab-chat" onclick="switchTab('chat')">会話練習 (AI)</div>
+        <div class="tab" id="tab-record" onclick="switchTab('record')">学習記録</div>
       </div>
 
-      <!-- コントロールパネル (共通) -->
-      <div style="margin-bottom: 20px;">
+      <div id="controlPanel" style="margin-bottom: 20px;">
         <label>頻度:</label><select id="freqSelect"></select>
         <label>カテゴリ:</label><select id="catSelect"></select>
       </div>
 
-      <!-- ========================================== -->
       <!-- スロット練習タブ -->
-      <!-- ========================================== -->
       <div id="content-slot" class="tab-content active">
         <button class="button" onclick="generateSlotSentence()">ランダム生成</button>
-        
         <div id="sentenceArea" class="slot-sentence" style="display:none;"></div>
-
         <div id="slotActions" style="display:none;">
           <button class="button" onclick="speakSlotSentence()">🔊 お手本を聞く</button>
           <button class="button" style="background-color: #e74c3c;" onclick="startSlotRecognition()">🎤 発音チェック</button>
         </div>
-
-        <!-- スロット用評価結果 -->
         <div id="slotResultBox" class="result-box">
           <div id="slotScoreDisplay" class="score-text"></div>
           <div id="slotFeedbackMsg" style="text-align: center; margin-bottom: 15px; font-weight: bold;"></div>
@@ -114,34 +100,32 @@
         </div>
       </div>
 
-      <!-- ========================================== -->
       <!-- 会話練習タブ -->
-      <!-- ========================================== -->
       <div id="content-chat" class="tab-content">
         <button class="button" onclick="generateChatQuestion()">質問を生成する</button>
-        
         <div class="chat-box" id="chatBox" style="display:none;">
-          <!-- 質問表示 -->
           <div class="chat-bubble chat-q">
             <div class="zh-text" id="qZh"></div>
             <div class="py-text" id="qPy"></div>
             <button class="button" style="padding: 5px 10px; font-size: 12px; margin-top: 10px;" onclick="speakText('qZh')">🔊 聞く</button>
           </div>
-
-          <!-- 回答アクション -->
+          
           <div style="text-align: center; margin: 20px 0;">
             <button class="button" style="background-color: #e74c3c;" id="btnRecord" onclick="startChatRecognition()">🎤 回答を音声入力</button>
             <div id="recStatus" style="color: #e74c3c; font-weight: bold; margin-top: 5px;"></div>
           </div>
 
-          <!-- ユーザー回答表示 -->
           <div class="chat-bubble chat-a" id="userAnswerBox" style="display:none;">
             <div class="zh-text" id="aZh"></div>
             <div class="py-text" id="aPy"></div>
           </div>
+
+          <!-- ★新規追加：AI評価依頼ボタン -->
+          <div style="text-align: center; margin-top: 15px;">
+            <button class="button" style="background-color: #8e44ad; display:none;" id="btnRequestAI" onclick="requestAIEvaluation()">🤖 AIに評価を依頼する</button>
+          </div>
         </div>
 
-        <!-- AI評価結果 -->
         <div class="ai-result" id="aiResultBox">
           <div class="ai-score" id="aiScore"></div>
           <div class="ai-feedback" id="aiFeedback"></div>
@@ -149,10 +133,19 @@
         </div>
       </div>
 
+      <!-- 学習記録タブ -->
+      <div id="content-record" class="tab-content">
+        <div style="text-align: right; margin-bottom: 10px;">
+          <button class="button" style="background-color: #27ae60;" onclick="copyRecords()">📋 全てコピー</button>
+          <button class="button" style="background-color: #7f8c8d;" onclick="clearRecords()">🗑️ 記録をクリア</button>
+        </div>
+        <textarea id="recordArea" rows="20" readonly placeholder="ここに学習記録が蓄積されます。"></textarea>
+      </div>
+
     </div>
   </div>
 
-  <!-- 置き換え用モーダル (スロット用) -->
+  <!-- モーダル -->
   <div id="selectionModal" class="modal-overlay">
     <div class="modal-content">
       <div id="modalHeader" class="modal-header">単語を選択してください</div>
@@ -162,20 +155,19 @@
   </div>
 
   <script>
-    // ★★★ ここにGASのウェブアプリURLを貼り付けてください ★★★
-    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxAEniCRdgi5eboiRpF5RoxD_3iB-TlBmr6S2rKeekVBG780yB0PljFP4fh_XKLy2IW/exec'; 
+    // ★★★ GASのURLを貼り付けてください ★★★
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxCIF_7kZjWolAeuPRtlbtZsF1hXPJxdN-_mk6UC9ak6emoJJKpxlR_5rbmz6-KBSiRzQ/exec'; 
+
     let appData = null;
     let currentSlots = {}; 
     let currentQuestion = ""; 
+    let currentQuestionPy = "";
     const { pinyin } = pinyinPro;
 
-    // --- 音声認識の制御用変数 ---
-    let slotRecognition = null;
-    let isSlotRecording = false;
-    let chatRecognition = null;
-    let isChatRecording = false;
+    let slotRecognition = null; let isSlotRecording = false;
+    let chatRecognition = null; let isChatRecording = false;
+    let learningRecords = []; // 学習記録用配列
 
-    // --- 初期化 ---
     window.onload = async () => {
       try {
         const response = await fetch(GAS_API_URL);
@@ -202,19 +194,19 @@
       document.getElementById('tab-' + tabName).classList.add('active');
       document.getElementById('content-' + tabName).classList.add('active');
       
+      document.getElementById('controlPanel').style.display = (tabName === 'record') ? 'none' : 'block';
+
       if(tabName === 'slot') generateSlotSentence();
       if(tabName === 'chat') generateChatQuestion();
+      if(tabName === 'record') updateRecordDisplay();
     }
 
     function getRandom(arr) { return arr && arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : null; }
 
-    // ==========================================
-    // スロット練習機能のロジック
-    // ==========================================
+    // --- スロット練習 ---
     function generateSlotSentence() {
       const cat = document.getElementById('catSelect').value;
       const freq = document.getElementById('freqSelect').value;
-      
       const subjPair = getRandom(appData.subjects) || {qSubject: '你', qPinyin: 'nǐ'};
       currentSlots.subject = { chinese: subjPair.qSubject, pinyin: subjPair.qPinyin };
       currentSlots.frequency = appData.frequencies.find(f => f.text === freq) || {text: freq};
@@ -250,10 +242,7 @@
       listDiv.innerHTML = '';
       let options = [];
 
-      if (slotType === 'subject') { 
-        header.innerText = '主語を変更'; 
-        options = appData.subjects.map(s => ({chinese: s.qSubject, pinyin: s.qPinyin, japanese: ''})); 
-      } 
+      if (slotType === 'subject') { header.innerText = '主語を変更'; options = appData.subjects.map(s => ({chinese: s.qSubject, pinyin: s.qPinyin})); } 
       else if (slotType === 'frequency') { header.innerText = '頻度を変更'; options = appData.frequencies; } 
       else if (slotType === 'verb') { header.innerText = '動詞を変更'; options = appData.verbs.filter(v => v.targetCategory === currentSlots.activeCategory); } 
       else if (slotType === 'object') { header.innerText = '目的語を変更'; options = appData.categories[currentSlots.activeCategory] || []; }
@@ -261,7 +250,7 @@
       options.forEach(opt => {
         const item = document.createElement('div'); item.className = 'option-item';
         const zhText = opt.text || opt.chinese;
-        item.innerHTML = `<div><span class="opt-zh">${zhText}</span><span class="opt-py">${opt.pinyin}</span></div><div class="opt-ja">${opt.japanese || ''}</div>`;
+        item.innerHTML = `<div><span class="opt-zh">${zhText}</span><span class="opt-py">${opt.pinyin}</span></div>`;
         item.onclick = () => { currentSlots[slotType] = opt; renderSentence(); closeModal(); };
         listDiv.appendChild(item);
       });
@@ -269,63 +258,39 @@
     }
 
     function closeModal() { document.getElementById('selectionModal').style.display = 'none'; }
-
-    function getFullSlotText() {
-      return ['subject', 'frequency', 'verb', 'object'].map(t => currentSlots[t].text || currentSlots[t].chinese).join('');
-    }
-
+    function getFullSlotText() { return ['subject', 'frequency', 'verb', 'object'].map(t => currentSlots[t].text || currentSlots[t].chinese).join(''); }
     function speakSlotSentence() {
       const utterance = new SpeechSynthesisUtterance(getFullSlotText() + '。');
-      utterance.lang = 'zh-CN';
-      window.speechSynthesis.speak(utterance);
+      utterance.lang = 'zh-CN'; window.speechSynthesis.speak(utterance);
     }
 
-    // --- スロット用 音声認識（手動停止対応） ---
     function startSlotRecognition() {
-      if (!('webkitSpeechRecognition' in window)) { alert('Chromeブラウザをご利用ください。'); return; }
-      
+      if (!('webkitSpeechRecognition' in window)) { alert('Chromeをご利用ください。'); return; }
       const btn = document.querySelector('#slotActions button:nth-child(2)');
       const scoreEl = document.getElementById('slotScoreDisplay');
 
-      // 録音中なら停止する
-      if (isSlotRecording) {
-        if (slotRecognition) slotRecognition.stop();
-        return;
-      }
+      if (isSlotRecording) { if (slotRecognition) slotRecognition.stop(); return; }
 
       slotRecognition = new webkitSpeechRecognition();
-      slotRecognition.lang = 'zh-CN';
-      slotRecognition.interimResults = false;
+      slotRecognition.lang = 'zh-CN'; slotRecognition.interimResults = false;
       
       document.getElementById('slotResultBox').style.display = 'block';
       scoreEl.innerText = '🎤 聞き取っています... (もう一度押すと終了)';
       scoreEl.className = 'score-text';
       document.getElementById('slotFeedbackMsg').innerText = '';
       
-      // ボタンの見た目を変更
-      btn.innerText = '⏹ 録音を停止';
-      btn.style.backgroundColor = '#7f8c8d';
+      btn.innerText = '⏹ 録音を停止'; btn.style.backgroundColor = '#7f8c8d';
       isSlotRecording = true;
 
       slotRecognition.onresult = (e) => {
         const userText = e.results[0][0].transcript.replace(/[。，？！]/g, '');
-        const targetText = getFullSlotText();
-        evaluatePronunciation(targetText, userText);
+        evaluatePronunciation(getFullSlotText(), userText);
       };
-
-      slotRecognition.onerror = (e) => { 
-        if(e.error === 'no-speech') scoreEl.innerText = '音声が検出されませんでした。';
-        else scoreEl.innerText = 'エラー: ' + e.error; 
-      };
-
+      slotRecognition.onerror = (e) => { scoreEl.innerText = (e.error === 'no-speech') ? '音声が検出されませんでした。' : 'エラー: ' + e.error; };
       slotRecognition.onend = () => {
-        // 録音が終わったらボタンを元に戻す
-        isSlotRecording = false;
-        btn.innerText = '🎤 発音チェック';
-        btn.style.backgroundColor = '#e74c3c';
+        isSlotRecording = false; btn.innerText = '🎤 発音チェック'; btn.style.backgroundColor = '#e74c3c';
         if(scoreEl.innerText.includes('聞き取っています')) scoreEl.innerText = '録音終了';
       };
-
       slotRecognition.start();
     }
 
@@ -366,11 +331,13 @@
       document.getElementById('targetPy').innerText = targetPyArr.join(' ');
       document.getElementById('userZh').innerText = userText || '(聞き取れませんでした)';
       document.getElementById('userPy').innerText = userPyArr.join(' ');
+
+      // ★ スロット練習の自動記録
+      const recordText = `[${new Date().toLocaleString()}]\n【スロット練習】\n目標: ${targetText} (${targetPyArr.join(' ')})\n入力: ${userText || '無音'} (${userPyArr.join(' ')})\n評価: スコア ${score}点 - ${feedback}\n------------------------\n`;
+      learningRecords.push(recordText);
     }
 
-    // ==========================================
-    // 会話練習機能のロジック
-    // ==========================================
+    // --- 会話練習 ---
     function generateChatQuestion() {
       const cat = document.getElementById('catSelect').value;
       const freq = document.getElementById('freqSelect').value;
@@ -386,68 +353,66 @@
 
       const freqPy = appData.frequencies.find(f => f.text === freq).pinyin;
       currentQuestion = `${subjectPair.qSubject}${freq}${questionWord}？`;
-      const currentQuestionPy = `${subjectPair.qPinyin} ${freqPy} ${questionWordPy}?`;
+      currentQuestionPy = `${subjectPair.qPinyin} ${freqPy} ${questionWordPy}?`;
 
       document.getElementById('qZh').innerText = currentQuestion;
       document.getElementById('qPy').innerText = currentQuestionPy;
       document.getElementById('chatBox').style.display = 'block';
       document.getElementById('userAnswerBox').style.display = 'none';
       document.getElementById('aiResultBox').style.display = 'none';
+      document.getElementById('btnRequestAI').style.display = 'none'; // AI依頼ボタンを隠す
     }
 
     function speakText(elementId) {
       const text = document.getElementById(elementId).innerText;
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'zh-CN';
-      window.speechSynthesis.speak(utterance);
+      utterance.lang = 'zh-CN'; window.speechSynthesis.speak(utterance);
     }
 
-    // --- 会話用 音声認識（手動停止対応） ---
     function startChatRecognition() {
       if (!('webkitSpeechRecognition' in window)) { alert('Chromeをご利用ください。'); return; }
-      
       const btn = document.getElementById('btnRecord');
       const statusEl = document.getElementById('recStatus');
 
-      // 録音中なら停止する
-      if (isChatRecording) {
-        if (chatRecognition) chatRecognition.stop();
-        return;
-      }
+      if (isChatRecording) { if (chatRecognition) chatRecognition.stop(); return; }
 
       chatRecognition = new webkitSpeechRecognition();
-      chatRecognition.lang = 'zh-CN';
-      chatRecognition.interimResults = false;
+      chatRecognition.lang = 'zh-CN'; chatRecognition.interimResults = false;
       
       statusEl.innerText = '聞き取っています... (もう一度押すと終了)';
-      btn.innerText = '⏹ 録音を停止';
-      btn.style.backgroundColor = '#7f8c8d';
+      btn.innerText = '⏹ 録音を停止'; btn.style.backgroundColor = '#7f8c8d';
       isChatRecording = true;
+      
+      // 録音開始時にAIボタンと結果を隠す
+      document.getElementById('btnRequestAI').style.display = 'none';
+      document.getElementById('aiResultBox').style.display = 'none';
 
       chatRecognition.onresult = (e) => {
         const userText = e.results[0][0].transcript;
-        
         document.getElementById('aZh').innerText = userText;
         document.getElementById('aPy').innerText = pinyin(userText);
         document.getElementById('userAnswerBox').style.display = 'block';
-
-        evaluateWithAI(currentQuestion, userText);
+        
+        // ★ 音声認識完了後、AI依頼ボタンを表示する（自動送信はしない）
+        document.getElementById('btnRequestAI').style.display = 'inline-block';
       };
       
       chatRecognition.onerror = (e) => {
-        if(e.error === 'no-speech') statusEl.innerText = '音声が検出されませんでした。';
-        else statusEl.innerText = 'エラー: ' + e.error;
+        statusEl.innerText = (e.error === 'no-speech') ? '音声が検出されませんでした。' : 'エラー: ' + e.error;
       };
 
       chatRecognition.onend = () => {
-        // 録音が終わったらボタンを元に戻す
-        isChatRecording = false;
-        btn.innerText = '🎤 回答を音声入力';
-        btn.style.backgroundColor = '#e74c3c';
+        isChatRecording = false; btn.innerText = '🎤 回答を音声入力'; btn.style.backgroundColor = '#e74c3c';
         if(statusEl.innerText.includes('聞き取っています')) statusEl.innerText = '';
       };
-
       chatRecognition.start();
+    }
+
+    // ★ 新規追加：AI評価依頼ボタンが押された時の処理
+    function requestAIEvaluation() {
+      document.getElementById('btnRequestAI').style.display = 'none'; // 連打防止
+      const userText = document.getElementById('aZh').innerText;
+      evaluateWithAI(currentQuestion, userText);
     }
 
     async function evaluateWithAI(question, answer) {
@@ -468,9 +433,34 @@
         document.getElementById('aiScore').innerText = `スコア: ${result.score}点`;
         document.getElementById('aiFeedback').innerText = result.feedback;
         document.getElementById('aiCorrection').innerText = result.correction;
+
+        // ★ 会話練習の自動記録
+        const userPy = document.getElementById('aPy').innerText;
+        const recordText = `[${new Date().toLocaleString()}]\n【会話練習(AI自動)】\n質問: ${currentQuestion} (${currentQuestionPy})\n入力: ${answer} (${userPy})\nAI評価: スコア ${result.score}点\n${result.feedback}\n模範解答: ${result.correction}\n------------------------\n`;
+        learningRecords.push(recordText);
+
       } catch (error) {
         document.getElementById('aiScore').innerText = '評価エラー';
         document.getElementById('aiFeedback').innerText = '通信に失敗しました。AIサーバーが混雑している可能性があります。';
+        document.getElementById('btnRequestAI').style.display = 'inline-block'; // エラー時はボタンを復活させる
+      }
+    }
+
+    // --- 学習記録機能 ---
+    function updateRecordDisplay() {
+      const area = document.getElementById('recordArea');
+      area.value = learningRecords.length === 0 ? '' : [...learningRecords].reverse().join('');
+    }
+
+    function copyRecords() {
+      const text = document.getElementById('recordArea').value;
+      if (!text) { alert('コピーする記録がありません。'); return; }
+      navigator.clipboard.writeText(text).then(() => alert('学習記録をコピーしました！'));
+    }
+
+    function clearRecords() {
+      if (confirm('学習記録をすべて消去しますか？')) {
+        learningRecords = []; updateRecordDisplay();
       }
     }
   </script>
