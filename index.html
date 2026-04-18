@@ -156,7 +156,7 @@
 
   <script>
     // ★★★ GASのURLを貼り付けてください ★★★
-    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxCIF_7kZjWolAeuPRtlbtZsF1hXPJxdN-_mk6UC9ak6emoJJKpxlR_5rbmz6-KBSiRzQ/exec'; 
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwm5OHkGXRxisiFUjbtJpOGJKYyJZOontb2TCk0fIsVvUiI6xlQQZ3uv3RCSWQmU5aIMg/exec'; 
 
     let appData = null;
     let currentSlots = {}; 
@@ -207,8 +207,10 @@
     function generateSlotSentence() {
       const cat = document.getElementById('catSelect').value;
       const freq = document.getElementById('freqSelect').value;
-      const subjPair = getRandom(appData.subjects) || {qSubject: '你', qPinyin: 'nǐ'};
-      currentSlots.subject = { chinese: subjPair.qSubject, pinyin: subjPair.qPinyin };
+      
+      // ★ 全ての主語からランダムに選ぶように変更
+      currentSlots.subject = getRandom(appData.subjects) || {chinese: '我', pinyin: 'wǒ'};
+      
       currentSlots.frequency = appData.frequencies.find(f => f.text === freq) || {text: freq};
       currentSlots.verb = getRandom(appData.verbs.filter(v => v.targetCategory === cat)) || {chinese: '做'};
       currentSlots.object = getRandom(appData.categories[cat]) || {chinese: '什么'};
@@ -242,7 +244,7 @@
       listDiv.innerHTML = '';
       let options = [];
 
-      if (slotType === 'subject') { header.innerText = '主語を変更'; options = appData.subjects.map(s => ({chinese: s.qSubject, pinyin: s.qPinyin})); } 
+      if (slotType === 'subject') { header.innerText = '主語を変更'; options = appData.subjects; } 
       else if (slotType === 'frequency') { header.innerText = '頻度を変更'; options = appData.frequencies; } 
       else if (slotType === 'verb') { header.innerText = '動詞を変更'; options = appData.verbs.filter(v => v.targetCategory === currentSlots.activeCategory); } 
       else if (slotType === 'object') { header.innerText = '目的語を変更'; options = appData.categories[currentSlots.activeCategory] || []; }
@@ -338,10 +340,15 @@
     }
 
     // --- 会話練習 ---
+    // --- 会話練習 ---
     function generateChatQuestion() {
       const cat = document.getElementById('catSelect').value;
       const freq = document.getElementById('freqSelect').value;
-      const subjectPair = getRandom(appData.subjects) || {qSubject: '你', qPinyin: 'nǐ'};
+      
+      // ★ 会話の質問として不自然な「我(私)」「我们(私たち)」を除外したリストを作る
+      const questionSubjects = appData.subjects.filter(s => s.chinese !== '我' && s.chinese !== '我们');
+      // その中からランダムに選ぶ
+      const qSubj = getRandom(questionSubjects) || {chinese: '你', pinyin: 'nǐ'};
       
       let questionWord = ""; let questionWordPy = "";
       if (cat === '国') { questionWord = '去哪个国家'; questionWordPy = 'qù nǎge guójiā'; }
@@ -352,15 +359,17 @@
       else { questionWord = '看什么'; questionWordPy = 'kàn shénme'; }
 
       const freqPy = appData.frequencies.find(f => f.text === freq).pinyin;
-      currentQuestion = `${subjectPair.qSubject}${freq}${questionWord}？`;
-      currentQuestionPy = `${subjectPair.qPinyin} ${freqPy} ${questionWordPy}?`;
+      
+      // ★ 質問文の組み立て
+      currentQuestion = `${qSubj.chinese}${freq}${questionWord}？`;
+      currentQuestionPy = `${qSubj.pinyin} ${freqPy} ${questionWordPy}?`;
 
       document.getElementById('qZh').innerText = currentQuestion;
       document.getElementById('qPy').innerText = currentQuestionPy;
       document.getElementById('chatBox').style.display = 'block';
       document.getElementById('userAnswerBox').style.display = 'none';
       document.getElementById('aiResultBox').style.display = 'none';
-      document.getElementById('btnRequestAI').style.display = 'none'; // AI依頼ボタンを隠す
+      document.getElementById('btnRequestAI').style.display = 'none';
     }
 
     function speakText(elementId) {
